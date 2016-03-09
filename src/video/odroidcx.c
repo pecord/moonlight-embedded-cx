@@ -2,6 +2,7 @@
  * This file is part of Moonlight Embedded.
  *
  * Copyright (C) 2015 Iwan Timmer
+ * Copyrgiht (C) 2016 OtherCrashOverride
  *
  * Moonlight is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
