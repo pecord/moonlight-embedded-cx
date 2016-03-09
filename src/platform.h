@@ -25,7 +25,7 @@
 
 #define IS_EMBEDDED(SYSTEM) SYSTEM != SDL
 
-enum platform { NONE, SDL, PI, IMX, FAKE };
+enum platform { NONE, SDL, PI, IMX, FAKE, ODROIDCX };
 
 enum platform platform_check(char*);
 PDECODER_RENDERER_CALLBACKS platform_get_video(enum platform system);
@@ -38,3 +38,5 @@ extern DECODER_RENDERER_CALLBACKS decoder_callbacks_fake;
 extern DECODER_RENDERER_CALLBACKS decoder_callbacks_sdl;
 void sdl_loop();
 #endif
+
+extern DECODER_RENDERER_CALLBACKS decoder_callbacks_odroidcx;

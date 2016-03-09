@@ -24,17 +24,17 @@
 
 void connection_connection_terminated()
 {
-  quit();
+	quit();
 }
 
 void connection_display_message(char *msg)
 {
-  printf("%s\n", msg);
+	printf("%s\n", msg);
 }
 
 void connection_display_transient_message(char *msg)
 {
-  printf("%s\n", msg);
+	printf("%s\n", msg);
 }
 
 CONNECTION_LISTENER_CALLBACKS connection_callbacks = {

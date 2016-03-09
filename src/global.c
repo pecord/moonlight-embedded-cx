@@ -23,5 +23,5 @@
 pthread_t main_thread_id;
 
 void quit() {
-  pthread_kill(main_thread_id, SIGTERM);
+	pthread_kill(main_thread_id, SIGTERM);
 }
