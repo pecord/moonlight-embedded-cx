@@ -42,7 +42,7 @@ typedef struct _CONFIGURATION {
   bool unsupported;
   char* inputs[MAX_INPUTS];
   int inputsCount;
-  enum codecs codec;
+  bool hevc;
 } CONFIGURATION, *PCONFIGURATION;
 
 bool inputAdded;

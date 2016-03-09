@@ -32,11 +32,11 @@ static void connection_terminated() {
 }
 
 static void connection_display_message(const char *msg) {
-  printf("%s\n", msg);
+	printf("%s\n", msg);
 }
 
 static void connection_display_transient_message(const char *msg) {
-  printf("%s\n", msg);
+	printf("%s\n", msg);
 }
 
 static void connection_log_message(const char* format, ...) {

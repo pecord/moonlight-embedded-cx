@@ -37,77 +37,78 @@ static int numFds = 0;
 static int sigFd;
 
 static int loop_sig_handler(int fd) {
-  struct signalfd_siginfo info;
-  read(fd, &info, sizeof(info));
-  switch (info.ssi_signo) {
-    case SIGINT:
-    case SIGTERM:
-    case SIGQUIT:
-    case SIGHUP:
-      return LOOP_RETURN;
-  }
-  return LOOP_OK;
+	struct signalfd_siginfo info;
+	read(fd, &info, sizeof(info));
+	switch (info.ssi_signo) {
+	case SIGINT:
+	case SIGTERM:
+	case SIGQUIT:
+	case SIGHUP:
+		return LOOP_RETURN;
+	}
+	return LOOP_OK;
 }
 
 void loop_add_fd(int fd, FdHandler handler, int events) {
-  int fdindex = numFds;
-  numFds++;
+	int fdindex = numFds;
+	numFds++;
 
-  if (fds == NULL) {
-    fds = malloc(sizeof(struct pollfd));
-    fdHandlers = malloc(sizeof(FdHandler*));
-  } else {
-    fds = realloc(fds, sizeof(struct pollfd)*numFds);
-    fdHandlers = realloc(fdHandlers, sizeof(FdHandler*)*numFds);
-  }
+	if (fds == NULL) {
+		fds = malloc(sizeof(struct pollfd));
+		fdHandlers = malloc(sizeof(FdHandler*));
+	}
+	else {
+		fds = realloc(fds, sizeof(struct pollfd)*numFds);
+		fdHandlers = realloc(fdHandlers, sizeof(FdHandler*)*numFds);
+	}
 
-  if (fds == NULL || fdHandlers == NULL) {
-    fprintf(stderr, "Not enough memory\n");
-    exit(EXIT_FAILURE);
-  }
+	if (fds == NULL || fdHandlers == NULL) {
+		fprintf(stderr, "Not enough memory\n");
+		exit(EXIT_FAILURE);
+	}
 
-  fds[fdindex].fd = fd;
-  fds[fdindex].events = events;
-  fdHandlers[fdindex] = handler;
+	fds[fdindex].fd = fd;
+	fds[fdindex].events = events;
+	fdHandlers[fdindex] = handler;
 }
 
 void loop_remove_fd(int fd) {
-  numFds--;
-  int fdindex;
-  
-  for (int i=0;i<numFds;i++) {
-    if (fds[i].fd = fd)
-      fdindex = i;
-      break;
-  }
-  
-  if (fdindex != numFds && numFds > 0) {
-    memcpy(&fds[fdindex], &fds[numFds], sizeof(struct pollfd));
-    memcpy(&fdHandlers[fdindex], &fdHandlers[numFds], sizeof(FdHandler*));
-  }
+	numFds--;
+	int fdindex;
+
+	for (int i = 0;i < numFds;i++) {
+		if (fds[i].fd = fd)
+			fdindex = i;
+		break;
+	}
+
+	if (fdindex != numFds && numFds > 0) {
+		memcpy(&fds[fdindex], &fds[numFds], sizeof(struct pollfd));
+		memcpy(&fdHandlers[fdindex], &fdHandlers[numFds], sizeof(FdHandler*));
+	}
 }
 
 void loop_main() {
-  main_thread_id = pthread_self();
-  sigset_t sigset;
-  sigemptyset(&sigset);
-  sigaddset(&sigset, SIGHUP);
-  sigaddset(&sigset, SIGTERM);
-  sigaddset(&sigset, SIGINT);
-  sigaddset(&sigset, SIGQUIT);
-  sigprocmask(SIG_BLOCK, &sigset, NULL);
-  sigFd = signalfd(-1, &sigset, 0);
-  loop_add_fd(sigFd, loop_sig_handler, POLLIN | POLLERR | POLLHUP);
+	main_thread_id = pthread_self();
+	sigset_t sigset;
+	sigemptyset(&sigset);
+	sigaddset(&sigset, SIGHUP);
+	sigaddset(&sigset, SIGTERM);
+	sigaddset(&sigset, SIGINT);
+	sigaddset(&sigset, SIGQUIT);
+	sigprocmask(SIG_BLOCK, &sigset, NULL);
+	sigFd = signalfd(-1, &sigset, 0);
+	loop_add_fd(sigFd, loop_sig_handler, POLLIN | POLLERR | POLLHUP);
 
-//static bool evdev_poll(bool (*handler) (struct input_event*, struct input_device*)) {
-  while (poll(fds, numFds, -1)) {
-    for (int i=0;i<numFds;i++) {
-      if (fds[i].revents > 0) {
-        int ret = fdHandlers[i](fds[i].fd);
-        if (ret == LOOP_RETURN) {
-          return;
-        }
-      }
-    }
-  }
+	//static bool evdev_poll(bool (*handler) (struct input_event*, struct input_device*)) {
+	while (poll(fds, numFds, -1)) {
+		for (int i = 0;i < numFds;i++) {
+			if (fds[i].revents > 0) {
+				int ret = fdHandlers[i](fds[i].fd);
+				if (ret == LOOP_RETURN) {
+					return;
+				}
+			}
+		}
+	}
 }

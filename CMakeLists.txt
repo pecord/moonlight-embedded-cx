@@ -18,16 +18,17 @@ find_package(Amlogic)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(EVDEV REQUIRED libevdev)
 pkg_check_modules(UDEV REQUIRED libudev)
-pkg_check_modules(SDL sdl2>=2.0.4)
-pkg_check_modules(AVCODEC libavcodec)
-pkg_check_modules(AVUTIL libavutil)
+#pkg_check_modules(SDL sdl2>=2.0.4)
+#pkg_check_modules(AVCODEC libavcodec)
+#pkg_check_modules(AVUTIL libavutil)
 pkg_check_modules(XLIB x11)
 pkg_check_modules(VDPAU vdpau)
 pkg_check_modules(LIBVA libva)
 pkg_check_modules(LIBVA_X11 libva-x11)
-pkg_check_modules(PULSE libpulse-simple)
-pkg_check_modules(CEC libcec>=4)
+#pkg_check_modules(PULSE libpulse-simple)
+#pkg_check_modules(CEC libcec>=3.0.0)
 pkg_check_modules(EGL egl)
+
 pkg_check_modules(GLES glesv2)
 
 set(VDPAU_ACCEL_FOUND FALSE)
@@ -53,7 +54,10 @@ SET(MOONLIGHT_COMMON_INCLUDE_DIR ./third_party/moonlight-common-c/src)
 SET(GAMESTREAM_INCLUDE_DIR ./libgamestream)
 
 if(NOT AMLOGIC_FOUND AND NOT BROADCOM_FOUND AND NOT FREESCALE_FOUND AND NOT SOFTWARE_FOUND)
-  message(FATAL_ERROR "No video output available")
+  #message(FATAL_ERROR "No video output available")
+  message(STATUS "Setting ODROIDCX video")
+  set(CMAKE_BUILD_TYPE Release)
+  list(APPEND SRC_LIST ./src/video/odroidcx.c)  
 endif()
 
 if (SOFTWARE_FOUND)
@@ -90,12 +94,13 @@ if (ALSA_FOUND)
   list(APPEND MOONLIGHT_DEFINITIONS HAVE_ALSA)
   list(APPEND MOONLIGHT_OPTIONS ALSA)
 endif()
-
+#[[
 if (PULSE_FOUND)
   list(APPEND SRC_LIST ./src/audio/pulse.c)
   list(APPEND MOONLIGHT_DEFINITIONS HAVE_PULSE)
   list(APPEND MOONLIGHT_OPTIONS PULSE)
 endif()
+]]
 
 if (CEC_FOUND)
   list(APPEND SRC_LIST ./src/input/cec.c)
@@ -108,6 +113,7 @@ add_subdirectory(libgamestream)
 add_executable(moonlight ${SRC_LIST})
 target_link_libraries(moonlight gamestream)
 
+#[[
 if (CEC_FOUND)
   list(APPEND MOONLIGHT_DEFINITIONS HAVE_LIBCEC)
   list(APPEND MOONLIGHT_OPTIONS CEC)
@@ -177,12 +183,14 @@ if (PULSE_FOUND)
   target_include_directories(moonlight PRIVATE ${PULSE_INCLUDE_DIRS})
   target_link_libraries(moonlight ${PULSE_LIBRARIES})
 endif()
+]]
 
 configure_file("./src/configuration.h.in" "${PROJECT_BINARY_DIR}/configuration.h")
 
 set_property(TARGET moonlight PROPERTY COMPILE_DEFINITIONS ${MOONLIGHT_DEFINITIONS})
 target_include_directories(moonlight PRIVATE ${GAMESTREAM_INCLUDE_DIR} ${MOONLIGHT_COMMON_INCLUDE_DIR} ${OPUS_INCLUDE_DIRS} ${EVDEV_INCLUDE_DIRS} ${UDEV_INCLUDE_DIRS})
 target_link_libraries(moonlight ${EVDEV_LIBRARIES} ${OPUS_LIBRARY} ${UDEV_LIBRARIES} ${CMAKE_DL_LIBS})
+target_link_libraries(moonlight Mali /usr/lib/aml_libs/libamcodec.so /usr/lib/aml_libs/libamadec.so /usr/lib/aml_libs/libamavutils.so)
 
 add_subdirectory(docs)
 

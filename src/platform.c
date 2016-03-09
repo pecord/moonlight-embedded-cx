@@ -31,27 +31,27 @@
 #include <unistd.h>
 #include <dlfcn.h>
 
-typedef bool(*ImxInit)();
+//typedef bool(*ImxInit)();
 
 enum platform platform_check(char* name) {
-  bool std = strcmp(name, "auto") == 0;
-  #ifdef HAVE_IMX
-  if (std || strcmp(name, "imx") == 0) {
-    void *handle = dlopen("libmoonlight-imx.so", RTLD_NOW | RTLD_GLOBAL);
-    ImxInit video_imx_init = (ImxInit) dlsym(RTLD_DEFAULT, "video_imx_init");
-    if (handle != NULL) {
-      if (video_imx_init())
-        return IMX;
-    }
-  }
-  #endif
-  #ifdef HAVE_PI
-  if (std || strcmp(name, "pi") == 0) {
-    void *handle = dlopen("libmoonlight-pi.so", RTLD_NOW | RTLD_GLOBAL);
-    if (handle != NULL && dlsym(RTLD_DEFAULT, "bcm_host_init") != NULL)
-      return PI;
-  }
-  #endif
+	//bool std = strcmp(name, "default") == 0;
+	//#ifdef HAVE_IMX
+	//if (std || strcmp(name, "imx") == 0) {
+	//  void *handle = dlopen("libmoonlight-imx.so", RTLD_NOW | RTLD_GLOBAL);
+	//  ImxInit video_imx_init = (ImxInit) dlsym(RTLD_DEFAULT, "video_imx_init");
+	//  if (handle != NULL) {
+	//    if (video_imx_init())
+	//      return IMX;
+	//  }
+	//}
+	//#endif
+	//#ifdef HAVE_PI
+	//if (std || strcmp(name, "pi") == 0) {
+	//  void *handle = dlopen("libmoonlight-pi.so", RTLD_NOW | RTLD_GLOBAL);
+	//  if (handle != NULL && dlsym(RTLD_DEFAULT, "bcm_host_init") != NULL)
+	//    return PI;
+	//}
+	//#endif
   #ifdef HAVE_AML
   if (std || strcmp(name, "aml") == 0) {
     void *handle = dlopen("libmoonlight-aml.so", RTLD_NOW | RTLD_GLOBAL);
@@ -76,14 +76,15 @@ enum platform platform_check(char* name) {
     return X11;
   }
   #endif
-  #ifdef HAVE_SDL
-  if (std || strcmp(name, "sdl") == 0)
-    return SDL;
-  #endif
+	//#ifdef HAVE_SDL
+	//if (std || strcmp(name, "sdl") == 0)
+	//  return SDL;
+	//#endif
   if (strcmp(name, "fake") == 0)
-    return FAKE;
+	//  return FAKE;
 
-  return 0;
+	//return 0;
+	return ODROIDCX;
 }
 
 void platform_start(enum platform system) {
@@ -119,7 +120,7 @@ void platform_stop(enum platform system) {
 }
 
 DECODER_RENDERER_CALLBACKS* platform_get_video(enum platform system) {
-  switch (system) {
+	//switch (system) {
   #ifdef HAVE_X11
   case X11:
     return &decoder_callbacks_x11;
@@ -132,47 +133,48 @@ DECODER_RENDERER_CALLBACKS* platform_get_video(enum platform system) {
     return &decoder_callbacks_x11_vdpau;
   #endif
   #endif
-  #ifdef HAVE_SDL
-  case SDL:
-    return &decoder_callbacks_sdl;
-  #endif
-  #ifdef HAVE_IMX
-  case IMX:
-    return (PDECODER_RENDERER_CALLBACKS) dlsym(RTLD_DEFAULT, "decoder_callbacks_imx");
-  #endif
-  #ifdef HAVE_PI
-  case PI:
-    return (PDECODER_RENDERER_CALLBACKS) dlsym(RTLD_DEFAULT, "decoder_callbacks_pi");
-  #endif
-  #ifdef HAVE_AML
-  case AML:
-    return (PDECODER_RENDERER_CALLBACKS) dlsym(RTLD_DEFAULT, "decoder_callbacks_aml");
-  #endif
-  }
-  return NULL;
+	//#ifdef HAVE_SDL
+	//case SDL:
+	//  return &decoder_callbacks_sdl;
+	//#endif
+	//#ifdef HAVE_IMX
+	//case IMX:
+	//  return (PDECODER_RENDERER_CALLBACKS) dlsym(RTLD_DEFAULT, "decoder_callbacks_imx");
+	//#endif
+	//#ifdef HAVE_PI
+	//case PI:
+	//  return (PDECODER_RENDERER_CALLBACKS) dlsym(RTLD_DEFAULT, "decoder_callbacks_pi");
+	//#endif
+	//#ifdef HAVE_FAKE
+	//case FAKE:
+	//  return &decoder_callbacks_fake;
+	//#endif
+	//}
+	//return NULL;
+	return &decoder_callbacks_odroidcx;
 }
 
 AUDIO_RENDERER_CALLBACKS* platform_get_audio(enum platform system, char* audio_device) {
-  switch (system) {
-  #ifdef HAVE_SDL
-  case SDL:
-    return &audio_callbacks_sdl;
-  #endif
+//	switch (system) {
+//#ifdef HAVE_SDL
+//	case SDL:
+//		return &audio_callbacks_sdl;
+//#endif
   #ifdef HAVE_PI
   case PI:
     if (audio_device == NULL || strcmp(audio_device, "local") == 0 || strcmp(audio_device, "hdmi") == 0)
       return (PAUDIO_RENDERER_CALLBACKS) dlsym(RTLD_DEFAULT, "audio_callbacks_omx");
   #endif
-  default:
-    #ifdef HAVE_PULSE
-    if (audio_pulse_init(audio_device))
-      return &audio_callbacks_pulse;
-    #endif
+//	default:
+//#ifdef HAVE_PULSE
+//		if (audio_pulse_init())
+//			return &audio_callbacks_pulse;
+//#endif
     #ifdef HAVE_ALSA
-    return &audio_callbacks_alsa;
+		return &audio_callbacks_alsa;
     #endif
-  }
-  return NULL;
+	//}
+	//return NULL;
 }
 
 bool platform_supports_hevc(enum platform system) {
