@@ -26,8 +26,8 @@ pkg_check_modules(UDEV REQUIRED libudev)
 #pkg_check_modules(AVUTIL libavutil)
 #pkg_check_modules(XLIB x11-xcb)
 #pkg_check_modules(LIBVA vdpau)
-pkg_check_modules(PULSE libpulse-simple)
-pkg_check_modules(CEC libcec>=3.0.0)
+#pkg_check_modules(PULSE libpulse-simple)
+#pkg_check_modules(CEC libcec>=3.0.0)
 
 #if(AVCODEC_FOUND AND AVUTIL_FOUND AND SDL_FOUND)
 #  set(SOFTWARE_FOUND TRUE)
@@ -69,11 +69,13 @@ if (BROADCOM_FOUND OR FREESCALE_FOUND OR CMAKE_BUILD_TYPE MATCHES Debug)
   list(APPEND MOONLIGHT_OPTIONS EMBEDDED)
 endif()
 
+#[[
 if (PULSE_FOUND)
   list(APPEND SRC_LIST ./src/audio/pulse.c)
   list(APPEND MOONLIGHT_DEFINITIONS HAVE_PULSE)
   list(APPEND MOONLIGHT_OPTIONS PULSE)
 endif()
+]]
 
 include_directories("${PROJECT_BINARY_DIR}")
 
@@ -85,6 +87,7 @@ add_executable(moonlight ${SRC_LIST})
 target_link_libraries(moonlight gamestream)
 set_property(TARGET moonlight PROPERTY C_STANDARD 99)
 
+#[[
 if (CEC_FOUND)
   list(APPEND MOONLIGHT_DEFINITIONS HAVE_LIBCEC)
   list(APPEND MOONLIGHT_OPTIONS CEC)
@@ -125,6 +128,7 @@ if (PULSE_FOUND)
   target_include_directories(moonlight PRIVATE ${PULSE_INCLUDE_DIRS})
   target_link_libraries(moonlight ${PULSE_LIBRARIES})
 endif()
+]]
 
 configure_file("./src/configuration.h.in" "${PROJECT_BINARY_DIR}/configuration.h")
 

@@ -34,8 +34,8 @@
 //static FILE* fd;
 //static const char* fileName = "fake.h264";
 static codec_para_t codecParam = { 0 };
-const int EXTERNAL_PTS = (1);
-const int SYNC_OUTSIDE = (2);
+const size_t EXTERNAL_PTS = (1);
+const size_t SYNC_OUTSIDE = (2);
 
 
 fbdev_window window;
@@ -286,19 +286,23 @@ void SetupDisplay()
 }
 
 void decoder_renderer_setup(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags) {
-	//fd = fopen(fileName, "w");
+	printf("videoFormat=%x, width=%d, height=%d, redrawRate=%d, context=%p, drFlags=%x\n",
+		videoFormat, width, height, redrawRate, context, drFlags);
+
+
 	SetupDisplay();
 
-	//codec_para_t codecParam = { 0 };
+
 	codecParam.stream_type = STREAM_TYPE_ES_VIDEO;
 	codecParam.has_video = 1;
 	codecParam.noblock = 0;
 	codecParam.video_type = VFORMAT_H264;
+	//codecParam.vbuf_size = 64 * 1024;
 
 	codecParam.am_sysinfo.format = VIDEO_DEC_FORMAT_H264;  ///< video format, such as H264, MPEG2...
-	//codecParam.am_sysinfo.width = 1920;   //< video source width
-	//codecParam.am_sysinfo.height = 1080;  //< video source height
-	//codecParam.am_sysinfo.rate = 96000 / 24;    //< video source frame duration
+	codecParam.am_sysinfo.width = width;   //< video source width
+	codecParam.am_sysinfo.height = height;  //< video source height
+	//codecParam.am_sysinfo.rate = (96000 / (redrawRate));    //< video source frame duration
 	//codecParam.am_sysinfo.extra;   //< extra data information of video stream
 	//codecParam.am_sysinfo.status;  //< status of video stream
 	//codecParam.am_sysinfo.ratio;   //< aspect ratio of video source
@@ -339,6 +343,11 @@ int decoder_renderer_submit_decode_unit(PDECODE_UNIT decodeUnit) {
 	while (entry != NULL) {
 		//fwrite(entry->data, entry->length, 1, fd);
 		int api = codec_write(&codecParam, entry->data, entry->length);
+		if (api != entry->length)
+		{
+			printf("codec_write error: %x\n", api);
+		}
+
 		entry = entry->next;
 	}
 	return DR_OK;
