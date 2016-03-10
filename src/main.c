@@ -82,6 +82,12 @@ static void stream(PSERVER_DATA server, PCONFIGURATION config, enum platform sys
 		fprintf(stderr, "Can't find app %s\n", config->app);
 		exit(-1);
 	}
+	
+	// h265
+	if (config->hevc)
+	{
+		config->stream.supportsHevc = 1;
+	}
 
 	int ret = gs_start_app(server, &config->stream, appId, config->sops, config->localaudio);
 	if (ret < 0) {

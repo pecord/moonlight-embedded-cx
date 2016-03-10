@@ -296,13 +296,41 @@ void decoder_renderer_setup(int videoFormat, int width, int height, int redrawRa
 	codecParam.stream_type = STREAM_TYPE_ES_VIDEO;
 	codecParam.has_video = 1;
 	codecParam.noblock = 0;
-	codecParam.video_type = VFORMAT_H264;
+
+	switch (videoFormat)
+	{
+	case 1:	//h264
+		if (width > 1920 || height > 1080)
+		{
+			codecParam.video_type = VFORMAT_H264_4K2K; 
+			codecParam.am_sysinfo.format = VIDEO_DEC_FORMAT_H264_4K2K; ///< video format, such as H264, MPEG2...
+		}
+		else
+		{
+			codecParam.video_type = VFORMAT_H264;
+			codecParam.am_sysinfo.format = VIDEO_DEC_FORMAT_H264;  ///< video format, such as H264, MPEG2...
+		}
+
+		printf("Decoding H264 video.\n");
+		break;
+
+	case 2: //h265
+		codecParam.video_type = VFORMAT_HEVC;
+		codecParam.am_sysinfo.format = VIDEO_DEC_FORMAT_HEVC;  ///< video format, such as H264, MPEG2...
+
+		printf("Decoding HEVC video.\n");
+		break;
+
+	default:
+		printf("Unsupported video format.\n");
+		exit(1);
+	}
+
 	//codecParam.vbuf_size = 64 * 1024;
 
-	codecParam.am_sysinfo.format = VIDEO_DEC_FORMAT_H264;  ///< video format, such as H264, MPEG2...
 	codecParam.am_sysinfo.width = width;   //< video source width
 	codecParam.am_sysinfo.height = height;  //< video source height
-	//codecParam.am_sysinfo.rate = (96000 / (redrawRate));    //< video source frame duration
+	codecParam.am_sysinfo.rate = (96000 / (redrawRate));    //< video source frame duration
 	//codecParam.am_sysinfo.extra;   //< extra data information of video stream
 	//codecParam.am_sysinfo.status;  //< status of video stream
 	//codecParam.am_sysinfo.ratio;   //< aspect ratio of video source
@@ -317,7 +345,6 @@ void decoder_renderer_setup(int videoFormat, int width, int height, int redrawRa
 		printf("codec_init failed.\n");
 		exit(1);
 	}
-
 }
 
 void decoder_renderer_cleanup() {

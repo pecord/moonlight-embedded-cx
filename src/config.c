@@ -63,6 +63,7 @@ static struct option long_options[] = {
   {"surround", no_argument, NULL, 'u'},
   {"fps", required_argument, NULL, 'v'},
   {"forcehw", no_argument, NULL, 'w'},
+  {"hevc", no_argument, NULL, 'y'},
   {0, 0, 0, 0},
 };
 
@@ -197,6 +198,9 @@ static void parse_argument(int c, char* value, PCONFIGURATION config) {
 	case 'v':
 		config->stream.fps = atoi(value);
 		break;
+	case 'y':
+		config->hevc = true;
+		break;
 	case 'w':
 		config->forcehw = true;
 	case 1:
@@ -292,6 +296,7 @@ void config_parse(int argc, char* argv[], PCONFIGURATION config) {
 	config->sops = true;
 	config->localaudio = false;
 	config->fullscreen = true;
+	config->hevc = false;
 
 	config->inputsCount = 0;
 	config->mapping = get_path("mappings/default.conf", getenv("XDG_DATA_DIRS"));
