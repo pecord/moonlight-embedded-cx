@@ -31,6 +31,8 @@
 #include <stdlib.h>
 #include <amcodec/codec.h>
 
+#include <string.h>
+
 //static FILE* fd;
 //static const char* fileName = "fake.h264";
 static codec_para_t codecParam = { 0 };
@@ -39,6 +41,18 @@ const size_t SYNC_OUTSIDE = (2);
 
 
 fbdev_window window;
+
+// DEBUGGING
+#define TESTBUFFER_LENGTH  (32 * 1024 * 10)
+static unsigned char testBuffer[TESTBUFFER_LENGTH];
+static int testBufferCount = 0;
+unsigned long pts = 0;
+int captureStream = 1;
+int captureCount = 0;
+#define CAPTURE_LENGTH ( 1024 * 10 )
+static FILE* captureFileHandle = 0;
+// END
+
 
 void SetupDisplay()
 {
@@ -95,11 +109,11 @@ void SetupDisplay()
 
 
 	// Display info
-	printf("EGL: Initialized - major=%d minor=%d\n", major, minor);
-	printf("EGL: Vendor=%s\n", eglQueryString(display, EGL_VENDOR));
-	printf("EGL: Version=%s\n", eglQueryString(display, EGL_VERSION));
-	printf("EGL: ClientAPIs=%s\n", eglQueryString(display, EGL_CLIENT_APIS));
-	printf("EGL: Extensions=%s\n\n", eglQueryString(display, EGL_EXTENSIONS));
+	//printf("EGL: Initialized - major=%d minor=%d\n", major, minor);
+	//printf("EGL: Vendor=%s\n", eglQueryString(display, EGL_VENDOR));
+	//printf("EGL: Version=%s\n", eglQueryString(display, EGL_VERSION));
+	//printf("EGL: ClientAPIs=%s\n", eglQueryString(display, EGL_CLIENT_APIS));
+	//printf("EGL: Extensions=%s\n\n", eglQueryString(display, EGL_EXTENSIONS));
 
 
 	// Find a config
@@ -251,10 +265,10 @@ void SetupDisplay()
 
 
 	// Display GLES info
-	printf("GL: Renderer=%s\n", glGetString(GL_RENDERER));
-	printf("GL: Vendor=%s\n", glGetString(GL_VENDOR));
-	printf("GL: Version=%s\n", glGetString(GL_VERSION));
-	printf("GL: Extensions=%s\n\n", glGetString(GL_EXTENSIONS));
+	//printf("GL: Renderer=%s\n", glGetString(GL_RENDERER));
+	//printf("GL: Vendor=%s\n", glGetString(GL_VENDOR));
+	//printf("GL: Version=%s\n", glGetString(GL_VERSION));
+	//printf("GL: Extensions=%s\n\n", glGetString(GL_EXTENSIONS));
 
 
 	// VSYNC
@@ -299,7 +313,7 @@ void decoder_renderer_setup(int videoFormat, int width, int height, int redrawRa
 
 	switch (videoFormat)
 	{
-	case 1:	//h264
+	case VIDEO_FORMAT_H264:	//1
 		if (width > 1920 || height > 1080)
 		{
 			codecParam.video_type = VFORMAT_H264_4K2K; 
@@ -314,7 +328,7 @@ void decoder_renderer_setup(int videoFormat, int width, int height, int redrawRa
 		printf("Decoding H264 video.\n");
 		break;
 
-	case 2: //h265
+	case VIDEO_FORMAT_H265: //2
 		codecParam.video_type = VFORMAT_HEVC;
 		codecParam.am_sysinfo.format = VIDEO_DEC_FORMAT_HEVC;  ///< video format, such as H264, MPEG2...
 
@@ -334,24 +348,47 @@ void decoder_renderer_setup(int videoFormat, int width, int height, int redrawRa
 	//codecParam.am_sysinfo.extra;   //< extra data information of video stream
 	//codecParam.am_sysinfo.status;  //< status of video stream
 	//codecParam.am_sysinfo.ratio;   //< aspect ratio of video source
-	codecParam.am_sysinfo.param = (void *)(EXTERNAL_PTS | SYNC_OUTSIDE);   //< other parameters for video decoder
+	codecParam.am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE);   //< other parameters for video decoder
 	//codecParam.am_sysinfo.ratio64;   //< aspect ratio of video source
 
 	int api = codec_init(&codecParam);
-	printf("codec_init=%x\n", api);
+	//printf("codec_init=%x\n", api);
 
 	if (api != 0)
 	{
-		printf("codec_init failed.\n");
+		printf("codec_init failed (%x).\n", api);
 		exit(1);
 	}
+
+	//int codec_set_syncenable(codec_para_t *pcodec, int enable);
+	//api = codec_set_syncenable(&codecParam, 0);
+	//printf("codec_set_syncenable=%x\n", api);
+
+
+	//int codec_get_freerun_mode(codec_para_t *pcodec);
+	//api = codec_get_freerun_mode(&codecParam);
+	//printf("codec_get_freerun_mode=%x\n", api);
+
+	//int codec_set_freerun_mode(codec_para_t *pcodec, unsigned int mode);
+
+	/*if (captureStream)
+	{
+		captureFileHandle = fopen("capture.h26x", "w");
+	}*/
+
+	//codec_checkin_pts(&codecParam, 0);
 }
 
 void decoder_renderer_cleanup() {
-	//fclose(fd);
+	
+	//if (captureStream)
+	//{
+	//	fclose(captureFileHandle);
+	//}
+
 	struct buf_status videoBufferStatus;
 
-	do
+	while(1)
 	{
 		int ret = codec_get_vbuf_state(&codecParam, &videoBufferStatus);
 		if (ret != 0)
@@ -359,30 +396,84 @@ void decoder_renderer_cleanup() {
 			printf("codec_get_vbuf_state error: %x\n", -ret);
 			break;
 		}
-	} while (videoBufferStatus.data_len > 0x100);
+		
+		if (videoBufferStatus.data_len < 0x100)
+			break;
+
+		sleep(100);
+	}
 
 	int api = codec_close(&codecParam);
-	printf("codec_close=%x\n", api);
+	//printf("codec_close=%x\n", api);
 }
 
-int decoder_renderer_submit_decode_unit(PDECODE_UNIT decodeUnit) {
+int decoder_renderer_submit_decode_unit(PDECODE_UNIT decodeUnit)
+{
+	//int entryCount = 0;
+
+	testBufferCount	= 0;
+	int result = DR_OK;
+
 	PLENTRY entry = decodeUnit->bufferList;
-	while (entry != NULL) {
+	while (entry != NULL) 
+	{
 		//fwrite(entry->data, entry->length, 1, fd);
+
+		//if (testBufferCount + entry->length > TESTBUFFER_LENGTH)
+		//{
+		//	// Buffer too small
+		//	printf("Buffer too small.\n");
+		//	break;
+		//}
+		//else
+		//{
+		//	memcpy(testBuffer + testBufferCount, entry->data, entry->length);
+		//	testBufferCount += entry->length;
+		//}
+		
 		int api = codec_write(&codecParam, entry->data, entry->length);
 		if (api != entry->length)
 		{
 			printf("codec_write error: %x\n", api);
+			
+			codec_reset(&codecParam);
+			result = DR_NEED_IDR;
 		}
 
 		entry = entry->next;
+		//++entryCount;
 	}
-	return DR_OK;
+
+	//printf ("entryCount=%d\n", entryCount);
+	
+	//if (captureStream &&
+	//	(captureCount <= CAPTURE_LENGTH))
+	//{		
+	//	fwrite(testBuffer, testBufferCount, 1, captureFileHandle);
+	//	captureCount += testBufferCount;
+	//}
+
+	//int api = codec_write(&codecParam, testBuffer, testBufferCount);
+	//if (api != testBufferCount)
+	//{
+	//	printf("codec_write error: %x\n", api);
+
+	//	codec_reset(&codecParam);
+	//	result = DR_NEED_IDR;
+	//}
+
+	//testBufferCount = 0;
+
+	// int codec_checkin_pts(codec_para_t *pcodec, unsigned long pts);
+	//codec_checkin_pts(&codecParam, pts);
+	//pts += 96000 / 60;
+
+	return result;
 }
 
 DECODER_RENDERER_CALLBACKS decoder_callbacks_odroidcx = {
   .setup = decoder_renderer_setup,
   .cleanup = decoder_renderer_cleanup,
   .submitDecodeUnit = decoder_renderer_submit_decode_unit,
-  .capabilities = CAPABILITY_DIRECT_SUBMIT,
+  .capabilities = CAPABILITY_DIRECT_SUBMIT | CAPABILITY_SLICES_PER_FRAME(8),	//
 };

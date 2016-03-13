@@ -29,6 +29,7 @@ pkg_check_modules(UDEV REQUIRED libudev)
 #pkg_check_modules(PULSE libpulse-simple)
 #pkg_check_modules(CEC libcec>=3.0.0)
 
+
 #if(AVCODEC_FOUND AND AVUTIL_FOUND AND SDL_FOUND)
 #  set(SOFTWARE_FOUND TRUE)
 #  if(XLIB_FOUND AND LIBVA_FOUND)
@@ -50,6 +51,7 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
 elseif(NOT BROADCOM_FOUND AND NOT FREESCALE_FOUND AND NOT SOFTWARE_FOUND)
   #message(FATAL_ERROR "No video output available")
   message(STATUS "Setting ODROIDCX video")
+  set(CMAKE_BUILD_TYPE Release)
   list(APPEND SRC_LIST ./src/video/odroidcx.c)  
 endif()
 
