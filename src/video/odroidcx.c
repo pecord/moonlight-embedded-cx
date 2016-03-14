@@ -386,23 +386,6 @@ void decoder_renderer_cleanup() {
 	//	fclose(captureFileHandle);
 	//}
 
-	struct buf_status videoBufferStatus;
-
-	while(1)
-	{
-		int ret = codec_get_vbuf_state(&codecParam, &videoBufferStatus);
-		if (ret != 0)
-		{
-			printf("codec_get_vbuf_state error: %x\n", -ret);
-			break;
-		}
-		
-		if (videoBufferStatus.data_len < 0x100)
-			break;
-
-		sleep(100);
-	}
-
 	int api = codec_close(&codecParam);
 	//printf("codec_close=%x\n", api);
 }
