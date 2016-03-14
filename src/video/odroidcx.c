@@ -24,10 +24,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <sys/ioctl.h>
-#include <EGL/egl.h>
-#include <GLES2/gl2.h>
-#include <linux/fb.h>
+#include <string.h>
 #include <stdlib.h>
 #include <amcodec/codec.h>
 
@@ -39,8 +36,6 @@ static codec_para_t codecParam = { 0 };
 const size_t EXTERNAL_PTS = (1);
 const size_t SYNC_OUTSIDE = (2);
 
-
-fbdev_window window;
 
 // DEBUGGING
 #define TESTBUFFER_LENGTH  (32 * 1024 * 10)
@@ -54,249 +49,34 @@ static FILE* captureFileHandle = 0;
 // END
 
 
-void SetupDisplay()
+int osd_blank(char *path,int cmd)
 {
-	int ret = -1;
+    int fd;
+    char  bcmd[16];
+    fd = open(path, O_CREAT|O_RDWR | O_TRUNC, 0644);
 
-	int fd_fb0 = open("/dev/fb0", O_RDWR);
-	printf("file handle: %x\n", fd_fb0);
-
-
-	struct fb_var_screeninfo info;
-	ret = ioctl(fd_fb0, FBIOGET_VSCREENINFO, &info);
-	if (ret < 0)
-	{
-		printf("FBIOGET_VSCREENINFO failed.\n");
-		exit(1);
-	}
-
-
-	int width = info.xres;
-	int height = info.yres;
-	int bpp = info.bits_per_pixel;
-	int dataLen = width * height * (bpp / 8);
-
-	printf("screen info: width=%d, height=%d, bpp=%d\n", width, height, bpp);
-
-
-
-	// Set the EGL window size
-	window.width = width;
-	window.height = height;
-
-
-	// Get the EGL display (fb0)
-	EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-	if (display == EGL_NO_DISPLAY)
-	{
-		printf("eglGetDisplay failed.\n");
-		exit(1);
-	}
-
-
-	// Initialize EGL
-	EGLint major;
-	EGLint minor;
-
-	EGLBoolean success = eglInitialize(display, &major, &minor);
-	if (success != EGL_TRUE)
-	{
-		EGLint error = eglGetError();
-		printf("eglGetError(): %i (0x%.4x)\n", (int)error, (int)error);
-		printf("Failed eglInitialize at %s:%i\n", __FILE__, __LINE__);
-		exit(1);
-	}
-
-
-	// Display info
-	//printf("EGL: Initialized - major=%d minor=%d\n", major, minor);
-	//printf("EGL: Vendor=%s\n", eglQueryString(display, EGL_VENDOR));
-	//printf("EGL: Version=%s\n", eglQueryString(display, EGL_VERSION));
-	//printf("EGL: ClientAPIs=%s\n", eglQueryString(display, EGL_CLIENT_APIS));
-	//printf("EGL: Extensions=%s\n\n", eglQueryString(display, EGL_EXTENSIONS));
-
-
-	// Find a config
-	int redSize;
-	int greenSize;
-	int blueSize;
-	int alphaSize;
-	int depthSize = 24;
-	int stencilSize = 8;
-
-	if (bpp < 32)
-	{
-		redSize = 5;
-		greenSize = 6;
-		blueSize = 5;
-		alphaSize = 0;
-	}
-	else
-	{
-		redSize = 8;
-		greenSize = 8;
-		blueSize = 8;
-		alphaSize = 8;
-	}
-
-
-	EGLint configAttributes[] =
-	{
-		EGL_RED_SIZE,            redSize,
-		EGL_GREEN_SIZE,          greenSize,
-		EGL_BLUE_SIZE,           blueSize,
-		EGL_ALPHA_SIZE,          alphaSize,
-
-		EGL_DEPTH_SIZE,          depthSize,
-		EGL_STENCIL_SIZE,        stencilSize,
-
-		EGL_SURFACE_TYPE,        EGL_WINDOW_BIT ,
-
-		EGL_NONE
-	};
-
-
-	int num_configs;
-	success = eglChooseConfig(display, configAttributes, NULL, 0, &num_configs);
-	if (success != EGL_TRUE)
-	{
-		EGLint error = eglGetError();
-		printf("eglGetError(): %i (0x%.4x)\n", (int)error, (int)error);
-		printf("Failed eglChooseConfig at %s:%i\n", __FILE__, __LINE__);
-		exit(1);
-	}
-
-
-	//EGLConfig* configs = new EGLConfig[num_configs];
-	EGLConfig* configs = (EGLConfig*)malloc(sizeof(EGLConfig) * num_configs);
-	success = eglChooseConfig(display, configAttributes, configs, num_configs, &num_configs);
-	if (success != EGL_TRUE)
-	{
-		EGLint error = eglGetError();
-		printf("eglGetError(): %i (0x%.4x)\n", (int)error, (int)error);
-		printf("Failed eglChooseConfig at %s:%i\n", __FILE__, __LINE__);
-		exit(1);
-	}
-
-
-	EGLConfig match = 0;
-
-	for (int i = 0; i < num_configs; ++i)
-	{
-		EGLint configRedSize;
-		EGLint configGreenSize;
-		EGLint configBlueSize;
-		EGLint configAlphaSize;
-		EGLint configDepthSize;
-		EGLint configStencilSize;
-
-		eglGetConfigAttrib(display, configs[i], EGL_RED_SIZE, &configRedSize);
-		eglGetConfigAttrib(display, configs[i], EGL_GREEN_SIZE, &configGreenSize);
-		eglGetConfigAttrib(display, configs[i], EGL_BLUE_SIZE, &configBlueSize);
-		eglGetConfigAttrib(display, configs[i], EGL_ALPHA_SIZE, &configAlphaSize);
-		eglGetConfigAttrib(display, configs[i], EGL_DEPTH_SIZE, &configDepthSize);
-		eglGetConfigAttrib(display, configs[i], EGL_STENCIL_SIZE, &configStencilSize);
-
-		if (configRedSize == redSize &&
-			configBlueSize == blueSize &&
-			configGreenSize == greenSize &&
-			configAlphaSize == alphaSize &&
-			configDepthSize == depthSize &&
-			configStencilSize == stencilSize)
-		{
-			match = configs[i];
-			break;
+    if(fd>=0) {
+        sprintf(bcmd,"%d",cmd);
+        if (write(fd,bcmd,strlen(bcmd)) < 0) {
+			printf("osd_blank error during write.\n");
 		}
-	}
+        close(fd);
+        return 0;
+    }
 
-	//delete[] configs;
-	free((void*)configs);
+    return -1;
+}
 
+void init_display()
+{
+	osd_blank("/sys/class/graphics/fb0/blank",1);
+    osd_blank("/sys/class/graphics/fb1/blank",0);
+}
 
-	if (match == 0)
-	{
-		printf("No eglConfig match found.\n");
-		exit(1);
-	}
-
-	printf("EGLConfig match found: (%p)\n", match);
-	printf("\n");
-
-
-	EGLint windowAttr[] = {
-		EGL_RENDER_BUFFER, EGL_BACK_BUFFER,
-		EGL_NONE };
-
-	EGLSurface surface = eglCreateWindowSurface(display, match, (NativeWindowType)&window, windowAttr);
-
-	if (surface == EGL_NO_SURFACE)
-	{
-		EGLint error = eglGetError();
-		printf("eglGetError(): %i (0x%.4x)\n", (int)error, (int)error);
-		printf("Failed eglCreateWindowSurface at %s:%i\n", __FILE__, __LINE__);
-		exit(1);
-	}
-
-
-	// Create a context
-	eglBindAPI(EGL_OPENGL_ES_API);
-
-	EGLint contextAttributes[] = {
-		EGL_CONTEXT_CLIENT_VERSION, 2,
-		EGL_NONE };
-
-	EGLContext context = eglCreateContext(display, match, EGL_NO_CONTEXT, contextAttributes);
-	if (context == EGL_NO_CONTEXT)
-	{
-		EGLint error = eglGetError();
-		printf("eglGetError(): %i (0x%.4x)\n", (int)error, (int)error);
-		printf("Failed eglCreateContext at %s:%i\n", __FILE__, __LINE__);
-		exit(1);
-	}
-
-	success = eglMakeCurrent(display, surface, surface, context);
-	if (success != EGL_TRUE)
-	{
-		EGLint error = eglGetError();
-		printf("eglGetError(): %i (0x%.4x)\n", (int)error, (int)error);
-		printf("Failed eglMakeCurrent at %s:%i\n", __FILE__, __LINE__);
-		exit(1);
-	}
-
-
-	// Display GLES info
-	//printf("GL: Renderer=%s\n", glGetString(GL_RENDERER));
-	//printf("GL: Vendor=%s\n", glGetString(GL_VENDOR));
-	//printf("GL: Version=%s\n", glGetString(GL_VERSION));
-	//printf("GL: Extensions=%s\n\n", glGetString(GL_EXTENSIONS));
-
-
-	// VSYNC
-	success = eglSwapInterval(display, 1);
-	if (success != EGL_TRUE)
-	{
-		EGLint error = eglGetError();
-		printf("eglGetError(): %i (0x%.4x)\n", (int)error, (int)error);
-		printf("Failed eglSwapInterval at %s:%i\n", __FILE__, __LINE__);
-		exit(1);
-	}
-
-
-	// Render
-	glClearColor(0, 0, 0, 0);
-	glClear(GL_COLOR_BUFFER_BIT |
-		GL_DEPTH_BUFFER_BIT |
-		GL_STENCIL_BUFFER_BIT);
-
-	success = eglSwapBuffers(display, surface);
-	if (success != EGL_TRUE)
-	{
-		EGLint error = eglGetError();
-		printf("eglGetError(): %i (0x%.4x)\n", (int)error, (int)error);
-		printf("Failed eglSwapBuffers at %s:%i\n", __FILE__, __LINE__);
-		exit(1);
-	}
-
+void restore_display()
+{
+	osd_blank("/sys/class/graphics/fb0/blank",0);
+    osd_blank("/sys/class/graphics/fb1/blank",0);
 }
 
 void decoder_renderer_setup(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags) {
@@ -304,7 +84,7 @@ void decoder_renderer_setup(int videoFormat, int width, int height, int redrawRa
 		videoFormat, width, height, redrawRate, context, drFlags);
 
 
-	SetupDisplay();
+	init_display();
 
 
 	codecParam.stream_type = STREAM_TYPE_ES_VIDEO;
@@ -388,6 +168,8 @@ void decoder_renderer_cleanup() {
 
 	int api = codec_close(&codecParam);
 	//printf("codec_close=%x\n", api);
+
+	restore_display();
 }
 
 int decoder_renderer_submit_decode_unit(PDECODE_UNIT decodeUnit)
