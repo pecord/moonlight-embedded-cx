@@ -39,10 +39,10 @@ typedef struct _CONFIGURATION {
   bool sops;
   bool localaudio;
   bool fullscreen;
-  bool unsupported;
-  char* inputs[MAX_INPUTS];
+  bool forcehw;
+  struct input_config inputs[MAX_INPUTS];
   int inputsCount;
-  enum codecs codec;
+  bool hevc;
 } CONFIGURATION, *PCONFIGURATION;
 
 bool inputAdded;

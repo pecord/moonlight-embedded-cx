@@ -17,9 +17,11 @@
  * along with Moonlight; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <va/va.h>
-#include <X11/Xlib.h>
+#include <signal.h>
+#include <pthread.h>
 
-int vaapi_init_lib();
-int vaapi_init(AVCodecContext* decoder_ctx);
-void vaapi_queue(AVFrame* dec_frame, Window win, int width, int height);
+pthread_t main_thread_id;
+
+void quit() {
+	pthread_kill(main_thread_id, SIGTERM);
+}

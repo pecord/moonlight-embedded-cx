@@ -20,23 +20,20 @@
 #include "connection.h"
 
 #include <stdio.h>
-#include <stdarg.h>
-#include <signal.h>
 
-pthread_t main_thread_id = 0;
-bool connection_debug;
-
-static void connection_terminated() {
-  if (main_thread_id != 0)
-    pthread_kill(main_thread_id, SIGTERM);
+void connection_connection_terminated()
+{
+	quit();
 }
 
-static void connection_display_message(const char *msg) {
-  printf("%s\n", msg);
+void connection_display_message(char *msg)
+{
+	printf("%s\n", msg);
 }
 
-static void connection_display_transient_message(const char *msg) {
-  printf("%s\n", msg);
+void connection_display_transient_message(char *msg)
+{
+	printf("%s\n", msg);
 }
 
 static void connection_log_message(const char* format, ...) {
